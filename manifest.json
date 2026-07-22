@@ -1,21 +1,21 @@
 {
   "name": "Studio Clock - 21:9 Studio Clock",
-  "short_name": "RelojStudio",
+  "short_name": "ClockStudio",
   "description": "Reloj de estudio ultrawide 21:9 con 10 diseños",
-  "start_url": "/reloj/",
+  "start_url": "/clock-app/",
   "display": "standalone",
   "orientation": "landscape",
   "background_color": "#000000",
   "theme_color": "#000000",
   "icons": [
     {
-      "src": "/reloj/icon-192.png",
+      "src": "icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/reloj/icon-512.png",
+      "src": "icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
