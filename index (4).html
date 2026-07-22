@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#000000">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/studioclock/manifest.json">
+    
+    <title>Studio Clock Ultimate 21:9</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Orbitron:wght@900&family=JetBrains+Mono:wght@800&family=Playfair+Display:ital,wght@1,900&family=Bebas+Neue&family=Syncopate:wght@700&family=Press+Start+2P&family=VT323&family=Share+Tech+Mono&family=Kalam:wght@700&family=Comic+Neue:wght@700&family=Tektur:wght@900&family=Dancing+Script:wght@700&family=Shadows+Into+Light&family=Fredoka+One&family=Righteous&family=Alfa+Slab+One&family=Short+Stack&family=Playwrite+IE&display=swap" rel="stylesheet">
+    
+    <style>
+        /* ===== RESET Y BASE ===== */
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+        body { background-color: #000; color: white; overflow: hidden; width: 100vw; height: 100vh; font-family: sans-serif; }
+
+        /* ===== PANTALLA DE INICIO ===== */
+        #start-overlay {
+            position: fixed; inset: 0; background: #000; z-index: 10000;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 0.4s ease;
+        }
+        .phone-icon {
+            width: 50px; height: 80px; border: 3px solid white; border-radius: 8px;
+            margin-bottom: 20px; animation: rotate 2s infinite ease-in-out;
+        }
+        @keyframes rotate { 0% { transform: rotate(0deg); } 50% { transform: rotate(90deg); } 100% { transform: rotate(0deg); } }
+        #btn-start {
+            padding: 20px 70px; background: white; color: black; border: none; 
+            border-radius: 50px; font-weight: bold; font-size: 1.4rem; cursor: pointer;
+        }
+
+        /* ===== SLIDER ===== */
+        .slider { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; width: 100vw; height: 100vh; scroll-behavior: smooth; }
+        .slider::-webkit-scrollbar { display: none; }
+        .screen { min-width: 100vw; height: 100vh; scroll-snap-align: start; display: flex; justify-content: center; align-items: center; position: relative; overflow: hidden; }
+
+        /* ===== ELEMENTOS GLOBALES ===== */
+        .date-info {
+            position: absolute;
+            font-size: 3.5vh;
+            color: #fff;
+            font-weight: 900;
+            background: rgba(0,0,0,0.6);
+            padding: 8px 15px;
+            border-radius: 8px;
+            z-index: 10;
+            letter-spacing: 2px;
+            font-family: sans-serif;
+        }
+        .ampm-info { font-size: 3vh; color: #ff2d55; font-weight: 900; margin-left: 10px; }
+        .sep { color: #ff2d55; }
+
+        /* ============================================================ */
+        /* ===== DISEÑO 1: SPLIT-FLAP CON SCAN ===== */
+        /* ============================================================ */
+        .style-bento .bento-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1vw;
+        }
+        .style-bento .flap-box {
+            background: #1a1a1a;
+            border-radius: 30px;
+            padding: 2vh 2.5vw;
+            min-width: 22vw;
+            height: 38vh;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            gap: 0.5vw;
+        }
+        .style-bento .flap-digit {
+            font-size: 32vh;
+            font-weight: 900;
+            font-family: 'Shadows Into Light', cursive;
+            color: #fff;
+            width: 7.5vw;
+            text-align: center;
+            position: relative;
+            z-index: 2;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .style-bento .flap-divider {
+            position: absolute;
+            left: 5%;
+            right: 5%;
+            height: 3px;
+            background: #ff2d55;
+            border-radius: 2px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 5;
+            box-shadow: 0 0 10px rgba(255,45,85,0.3);
+        }
+        .style-bento .sep-flap {
+            font-size: 18vh;
+            font-weight: 900;
+            color: #ff2d55;
+            margin: 0 0.2vw;
+        }
+        .style-bento .flap-box .scan-light {
+            position: absolute;
+            left: -100%;
+            top: 0;
+            width: 60%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 45, 85, 0.2), transparent);
+            z-index: 1;
+            pointer-events: none;
+            transition: none;
+        }
+        .style-bento .flap-box .scan-light.active {
+            animation: scanMove 0.8s ease forwards;
+        }
+        @keyframes scanMove {
+            0% { left: -100%; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { left: 120%; opacity: 0; }
+        }
+
+        /* ============================================================ */
+        /* ===== DISEÑO 2: CYBER ===== */
+        /* ============================================================ */
+        .style-cyber { font-family: 'Orbitron', sans-serif; font-size: 45vh; }
+        .style-cyber .hour-val { color: #fff; }
+        .style-cyber .min-val { color: #00f2ff; }
+
+        /* ============================================================ */
+        /* ===== DISEÑO 3: MULTI ===== */
+        /* ============================================================ */
+        .style-multi .digit { font-size: 55vh; font-weight: 900; display: inline-block; }
+        .style-multi .d1 { color: #FF3B30; }
+        .style-multi .d2 { color: #FF9500; }
+        .style-multi .d3 { color: #4CD964; }
+        .style-multi .d4 { color: #007AFF; }
+        .style-multi .sep-multi { font-size: 25vh; font-weight: 900; margin: 0 1vw; color: #ff2d55; }
+
+        /* ============================================================ */
+        /* ===== DISEÑO 4: RED BARS ===== */
+        /* ============================================================ */
+        .style-redbar { font-family: 'JetBrains Mono', monospace; }
+        .style-redbar .time-wrapper { font-size: 40vh; display: flex; gap: 20px; align-items: center; }
+        .style-redbar .bar-group { display: flex; flex-direction: column; align-items: center; }
+        .style-redbar .bar-group .digit { font-weight: 900; color: #fff; }
+        .style-redbar .mini-bar {
+            height: 12px;
+            width: 80%;
+            background: #ff2d55;
+            border-radius: 10px;
+            margin-top: 2vh;
+        }
+        .style-redbar .sep-red { font-size: 40vh; font-weight: 900; color: #ff2d55; margin-top: -3vh; }
+
+        /* ============================================================ */
+        /* ===== DISEÑO 5: NEO-BRUTAL ===== */
+        /* ============================================================ */
+        .style-neo { gap: 3vw; }
+        .style-neo .neo-box {
+            background: #fff;
+            color: #000;
+            width: 30vw;
+            height: 65vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 50vh;
+            font-family: 'Bebas Neue', sans-serif;
+            transform: rotate(-2deg);
+            box-shadow: 15px 15px 0 #ff2d55;
+            border-radius: 10px;
+        }
+        .style-neo .neo-box.min-box {
+            transform: rotate(2deg);
+            margin-left: 20px;
+            box-shadow: -15px 15px 0 #00f2ff;
+        }
+        .style-neo .neo-box .digit { color: #000; }
+
+        /* ============================================================ */
+        /* ===== DISEÑO 6: DEPTH 3D (MITADES COMPLETAS) ===== */
+        /* ============================================================ */
+        .style-depth {
+            display: flex;
+            flex-direction: row;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        .style-depth .half-screen {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            line-height: 0.8;
+            perspective: 1200px;
+            transform: rotateX(20deg);
+            text-shadow: 0 1.5vh 0 var(--depth-shadow, #999999);
+            height: 100vh;
+            width: 50vw;
+            transition: text-shadow 0.3s ease;
+        }
+        .style-depth .half-screen .hour-val {
+            font-size: inherit;
+            transition: color 0.3s ease;
+        }
+        .style-depth .half-screen .min-val {
+            font-size: inherit;
+            transition: color 0.3s ease;
+        }
+        .style-depth .sep-depth {
+            font-size: 45vh;
+            font-weight: 900;
+            margin: 0 0.5vw;
+            color: #ff2d55;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+        }
+
+        .style-depth.font-alfa .half-screen { font-family: 'Alfa Slab One', serif; font-size: 40vh; }
+        .style-depth.font-shortstack .half-screen { font-family: 'Short Stack', cursive; font-size: 50vh; }
+        .style-depth.font-playwrite .half-screen { font-family: 'Playwrite IE', cursive; font-size: 35vh; }
+
+        /* ============================================================ */
+        /* ===== DISEÑO 7: ELEGANT ===== */
+        /* ============================================================ */
+        .style-elegant {
+            font-family: 'Playfair Display', serif;
+            font-style: italic;
+            font-size: 55vh;
+            width: 100%;
+            text-align: center;
+            line-height: 0.75;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .style-elegant .hour-val { color: #fff; }
+        .style-elegant .min-val { color: #00f2ff; }
+        .style-elegant .sep-elegant { color: #ff2d55; }
+
+        /* ============================================================ */
+        /* ===== DISEÑO 8: MATRIX (SOLO CONTORNO) ===== */
+        /* ============================================================ */
+        #matrix-canvas {
+            position: absolute;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            opacity: 0.3;
+        }
+        .style-matrix {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 28vh;
+            z-index: 1;
+            line-height: 0.8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5vw;
+            flex-wrap: wrap;
+        }
+        .style-matrix .hour-val,
+        .style-matrix .min-val,
+        .style-matrix .sec-val {
+            font-family: 'Share Tech Mono', monospace;
+            -webkit-text-stroke: 2px #00ff41;
+            text-stroke: 2px #00ff41;
+            color: transparent;
+            text-shadow: none;
+        }
+        .style-matrix .sep-matrix {
+            color: #00ff41;
+            font-family: 'Share Tech Mono', monospace;
+            -webkit-text-stroke: 1px #00ff41;
+            text-stroke: 1px #00ff41;
+            color: transparent;
+        }
+        .style-matrix .date-info {
+            font-family: 'Share Tech Mono', monospace;
+            -webkit-text-stroke: 1px #00ff41;
+            text-stroke: 1px #00ff41;
+            color: transparent;
+            background: transparent;
+            letter-spacing: 3px;
+        }
+
+        /* ============================================================ */
+        /* ===== DISEÑO 9: NEON (REDUCIDO) ===== */
+        /* ============================================================ */
+        .style-neon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            perspective: 800px;
+        }
+        .style-neon .neon-wrapper {
+            transform: rotateX(8deg) rotateY(-3deg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1vh;
+        }
+        .style-neon .neon-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2vw;
+            position: relative;
+        }
+        .style-neon .neon-digit {
+            font-family: 'Syncopate', sans-serif;
+            font-size: 35vh;
+            font-weight: 700;
+            padding: 0 1vw;
+            background: rgba(255,45,85,0.03);
+            border-radius: 20px;
+            position: relative;
+            -webkit-text-stroke: 2px #ff2d55;
+            text-stroke: 2px #ff2d55;
+            color: transparent;
+            transition: all 0.4s ease;
+        }
+        .style-neon .neon-digit.glow {
+            color: #ff2d55;
+            -webkit-text-stroke: 0px transparent;
+            text-shadow: 0 0 10px #ff2d55, 0 0 20px #ff2d55, 0 0 40px #ff2d55;
+        }
+        .style-neon .neon-digit.sweep {
+            background: linear-gradient(90deg, transparent 0%, transparent 40%, rgba(255,255,255,0.3) 50%, transparent 60%, transparent 100%);
+            background-size: 200% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: lightSweep 2s infinite ease-in-out;
+        }
+        .style-neon .neon-digit.sweep.glow {
+            background: linear-gradient(90deg, transparent 0%, transparent 40%, rgba(255,255,255,0.7) 50%, transparent 60%, transparent 100%);
+            background-size: 200% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: lightSweep 2s infinite ease-in-out;
+        }
+        @keyframes lightSweep {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .style-neon .neon-sep {
+            font-family: 'Syncopate', sans-serif;
+            font-size: 30vh;
+            font-weight: 700;
+            padding: 0 0.5vw;
+            -webkit-text-stroke: 2px #ff2d55;
+            text-stroke: 2px #ff2d55;
+            color: transparent;
+            transition: all 0.4s ease;
+        }
+        .style-neon .neon-sep.glow {
+            color: #ff2d55;
+            -webkit-text-stroke: 0px transparent;
+            text-shadow: 0 0 10px #ff2d55, 0 0 20px #ff2d55;
+        }
+        .style-neon .neon-bar-bottom {
+            width: 50%;
+            height: 4px;
+            background: rgba(255,45,85,0.2);
+            border-radius: 4px;
+            margin-top: 2vh;
+            transition: all 0.5s ease;
+        }
+        .style-neon .neon-bar-bottom.glow {
+            background: #ff2d55;
+            box-shadow: 0 0 20px #ff2d55, 0 0 40px #ff2d55;
+        }
+        .style-neon .neon-date {
+            font-family: 'Syncopate', sans-serif;
+            font-size: 4vh;
+            font-weight: 700;
+            letter-spacing: 6px;
+            margin-top: 1vh;
+            -webkit-text-stroke: 1px #ff2d55;
+            text-stroke: 1px #ff2d55;
+            color: transparent;
+            transition: all 0.4s ease;
+        }
+        .style-neon .neon-date.glow {
+            color: #ff2d55;
+            -webkit-text-stroke: 0px transparent;
+            text-shadow: 0 0 15px #ff2d55, 0 0 30px #ff2d55;
+        }
+        .style-neon .neon-tube-top,
+        .style-neon .neon-tube-bottom {
+            width: 60%;
+            height: 2px;
+            background: rgba(255,45,85,0.2);
+            border-radius: 2px;
+            transition: all 0.5s ease;
+        }
+        .style-neon .neon-tube-top.glow,
+        .style-neon .neon-tube-bottom.glow {
+            background: #ff2d55;
+            box-shadow: 0 0 15px #ff2d55;
+        }
+
+        /* ============================================================ */
+        /* ===== DISEÑO 10: TITAN (4 DÍGITOS) ===== */
+        /* ============================================================ */
+        .style-titan {
+            font-family: 'Anton', sans-serif;
+            font-size: 70vh;
+            line-height: 0.6;
+            letter-spacing: -3vw;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5vw;
+            position: relative;
+        }
+        .style-titan .titan-digit {
+            position: relative;
+            z-index: 2;
+            display: inline-block;
+            font-size: inherit;
+            font-weight: 900;
+            transition: color 0.3s ease;
+        }
+        .style-titan .titan-digit.d1 { transform: rotate(-8deg); }
+        .style-titan .titan-digit.d2 { transform: rotate(-3deg); }
+        .style-titan .titan-digit.d3 { transform: rotate(3deg); }
+        .style-titan .titan-digit.d4 { transform: rotate(8deg); }
+        .style-titan .titan-digit::before {
+            content: attr(data-text);
+            position: absolute;
+            top: -12%;
+            left: -5%;
+            z-index: -1;
+            font-size: inherit;
+            letter-spacing: inherit;
+            opacity: 0.2;
+            transform: rotate(0deg);
+            transition: color 0.3s ease;
+        }
+        .style-titan .sep-titan {
+            font-size: 50vh;
+            font-weight: 900;
+            margin: 0 -0.3vw;
+            z-index: 10;
+            opacity: 0.6;
+            transform: rotate(0deg);
+            transition: color 0.3s ease;
+            position: relative;
+        }
+        .style-titan .date-info {
+            background: transparent;
+            color: rgba(255,255,255,0.2);
+        }
+
+        /* ============================================================ */
+        /* ===== BOTÓN UI Y MENÚ LATERAL ===== */
+        /* ============================================================ */
+        #btn-ui {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: white;
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            display: none;
+        }
+        #btn-ui:hover { background: rgba(255,255,255,0.15); transform: scale(1.05); }
+
+        #config {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 380px;
+            height: 100%;
+            background: rgba(12,12,12,0.97);
+            backdrop-filter: blur(30px);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid rgba(255,255,255,0.06);
+            transition: 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+            font-family: sans-serif;
+        }
+        #config.open { right: 0; }
+
+        .config-header {
+            padding: 20px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            flex-shrink: 0;
+        }
+        .config-header h2 {
+            font-family: 'Anton', sans-serif;
+            letter-spacing: 2px;
+            font-size: 1.4rem;
+            color: #fff;
+        }
+        .close-x {
+            font-size: 36px;
+            background: none;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            padding: 0 10px;
+            transition: color 0.2s;
+            line-height: 1;
+        }
+        .close-x:hover { color: #fff; }
+
+        .config-body {
+            padding: 20px 25px;
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .config-body::-webkit-scrollbar { width: 3px; }
+        .config-body::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+
+        .color-group {
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            padding: 12px 15px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .color-group .cg-title {
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            color: #666;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .color-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 4px 0;
+            flex-wrap: wrap;
+        }
+        .color-row label {
+            font-size: 0.7rem;
+            color: #aaa;
+            min-width: 50px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .color-row input[type="color"] {
+            -webkit-appearance: none;
+            border: 2px solid #FFD700 !important;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            background: none;
+            padding: 2px;
+        }
+        .color-row input[type="color"]::-webkit-color-swatch {
+            border: none;
+            border-radius: 5px;
+        }
+
+        .font-selector {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 6px;
+        }
+        .font-selector .font-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: #888;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+        }
+        .font-selector .font-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+        .font-selector .font-btn.active {
+            background: rgba(255,255,255,0.12);
+            border-color: rgba(255,255,255,0.3);
+            color: #fff;
+        }
+
+        .toggle-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            padding: 12px 15px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .toggle-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.75rem;
+            color: #aaa;
+        }
+        .toggle-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #fff;
+            cursor: pointer;
+        }
+
+        .btn-done {
+            width: 100%;
+            padding: 14px;
+            background: #fff;
+            color: #000;
+            border: none;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 4px;
+            flex-shrink: 0;
+        }
+        .btn-done:hover { background: #ddd; transform: scale(0.98); }
+
+        @media (max-width: 768px) {
+            #config { width: 100%; right: -100%; }
+            .style-bento .flap-box { min-width: 28vw; height: 28vh; }
+            .style-bento .flap-digit { font-size: 22vh; width: 9vw; }
+            .style-bento .sep-flap { font-size: 14vh; }
+            .style-cyber { font-size: 30vh; }
+            .style-multi .digit { font-size: 35vh; }
+            .style-redbar .time-wrapper { font-size: 25vh; }
+            .style-neo .neo-box { width: 35vw; height: 40vh; font-size: 30vh; }
+            .style-depth .half-screen { font-size: 30vh; }
+            .style-depth .sep-depth { font-size: 25vh; }
+            .style-elegant { font-size: 30vh; }
+            .style-matrix { font-size: 20vh; }
+            .style-neon .neon-digit { font-size: 25vh; }
+            .style-neon .neon-sep { font-size: 22vh; }
+            .style-titan { font-size: 40vh; letter-spacing: -2vw; }
+            .style-titan .sep-titan { font-size: 30vh; }
+        }
+    </style>
+</head>
+<body onclick="showUI()">
+
+    <!-- ===== OVERLAY INICIO ===== -->
+    <div id="start-overlay">
+        <div class="phone-icon"></div>
+        <h1 style="font-size: 3rem; font-family: 'Anton'; letter-spacing: 2px;">STUDIO CLOCK</h1>
+        <p style="opacity: 0.5; margin-bottom: 40px;">Optimizado para 21:9 Landscape</p>
+        <button id="btn-start" onclick="startApp()">COMENZAR</button>
+    </div>
+
+    <!-- ===== BOTÓN UI ===== -->
+    <button id="btn-ui" onclick="document.getElementById('config').classList.add('open')">⚙️</button>
+
+    <!-- ===== MENÚ LATERAL ===== -->
+    <div id="config">
+        <div class="config-header">
+            <h2>⚙️ AJUSTES</h2>
+            <button class="close-x" onclick="document.getElementById('config').classList.remove('open')">&times;</button>
+        </div>
+        <div class="config-body" id="config-body">
+            <div id="color-panels"></div>
+            <div class="toggle-group">
+                <div class="toggle-item"><label>12h</label><input type="checkbox" id="in-12"></div>
+                <div class="toggle-item"><label>Fecha</label><input type="checkbox" id="in-date" checked></div>
+            </div>
+            <button class="btn-done" onclick="document.getElementById('config').classList.remove('open')">LISTO</button>
+        </div>
+    </div>
+
+    <!-- ===== SLIDER ===== -->
+    <main class="slider" id="slider">
+
+        <!-- 1. BENTO + SPLIT-FLAP CON SCAN -->
+        <section class="screen style-bento" data-design="1">
+            <div class="date-info" style="top: 3vh; right: 3vw;">--/--</div>
+            <div class="bento-wrapper">
+                <div class="flap-box" id="flap-h">
+                    <span class="flap-digit" id="h1">0</span>
+                    <span class="flap-digit" id="h2">0</span>
+                    <div class="flap-divider"></div>
+                    <div class="scan-light" id="scan-h"></div>
+                </div>
+                <span class="sep-flap">:</span>
+                <div class="flap-box" id="flap-m">
+                    <span class="flap-digit" id="m1">0</span>
+                    <span class="flap-digit" id="m2">0</span>
+                    <div class="flap-divider"></div>
+                    <div class="scan-light" id="scan-m"></div>
+                </div>
+                <span class="sep-flap">:</span>
+                <div class="flap-box" id="flap-s" style="min-width: 22vw; height: 38vh; padding: 2vh 2.5vw;">
+                    <span class="flap-digit" id="s1" style="font-size: 32vh;">0</span>
+                    <span class="flap-digit" id="s2" style="font-size: 32vh;">0</span>
+                    <div class="flap-divider"></div>
+                    <div class="scan-light" id="scan-s"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. CYBER -->
+        <section class="screen style-cyber" data-design="2">
+            <div class="date-info" style="bottom: 5vh; left: 5vw;">--/--</div>
+            <span class="hour-val">00</span><span class="sep">:</span><span class="min-val">00</span>
+        </section>
+
+        <!-- 3. MULTI -->
+        <section class="screen style-multi" data-design="3">
+            <div class="date-info" style="top: 5vh; left: 5vw;">--/--</div>
+            <span class="digit d1">0</span><span class="digit d2">0</span>
+            <span class="sep-multi">:</span>
+            <span class="digit d3">0</span><span class="digit d4">0</span>
+        </section>
+
+        <!-- 4. RED BARS -->
+        <section class="screen style-redbar" data-design="4">
+            <div class="date-info" style="top: 5vh; right: 5vw;">--/--</div>
+            <div class="time-wrapper">
+                <div class="bar-group">
+                    <span class="digit hour-val">00</span>
+                    <div class="mini-bar" id="bar-h"></div>
+                </div>
+                <span class="sep-red">:</span>
+                <div class="bar-group">
+                    <span class="digit min-val">00</span>
+                    <div class="mini-bar" id="bar-m"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. NEO-BRUTAL -->
+        <section class="screen style-neo" data-design="5">
+            <div class="date-info" style="bottom: 5vh; right: 5vw; background: #ff2d55; color: #000;">--/--</div>
+            <div class="neo-box" id="neo-h"><span class="digit hour-val">00</span></div>
+            <div class="neo-box min-box" id="neo-m"><span class="digit min-val">00</span></div>
+        </section>
+
+        <!-- 6. DEPTH 3D (MITADES COMPLETAS) -->
+        <section class="screen style-depth font-alfa" data-design="6">
+            <div class="half-screen left" id="depth-left" style="background: #000000; --depth-shadow: #999999;">
+                <span class="hour-val" id="d6-h" style="color: #ffffff;">00</span>
+            </div>
+            <span class="sep-depth" id="d6-sep">:</span>
+            <div class="half-screen right" id="depth-right" style="background: #ffffff; --depth-shadow: #999999;">
+                <span class="min-val" id="d6-m" style="color: #000000;">00</span>
+            </div>
+            <div class="date-info" style="top: 3vh; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.3);">--/--</div>
+        </section>
+
+        <!-- 7. ELEGANT -->
+        <section class="screen style-elegant" data-design="7">
+            <div class="date-info" style="top: 5vh; right: 5vw; bottom: auto;">--/--</div>
+            <span class="hour-val">00</span><span class="sep-elegant">:</span><span class="min-val">00</span>
+        </section>
+
+        <!-- 8. MATRIX (SOLO CONTORNO) -->
+        <section class="screen style-matrix" data-design="8">
+            <canvas id="matrix-canvas"></canvas>
+            <div class="date-info" style="bottom: 5vh; left: 50%; transform: translateX(-50%);">--/--</div>
+            <span class="hour-val" id="mh1">0</span>
+            <span class="hour-val" id="mh2">0</span>
+            <span class="sep-matrix">:</span>
+            <span class="min-val" id="mm1">0</span>
+            <span class="min-val" id="mm2">0</span>
+            <span class="sep-matrix">:</span>
+            <span class="sec-val" id="ms1">0</span>
+            <span class="sec-val" id="ms2">0</span>
+        </section>
+
+        <!-- 9. NEON (REDUCIDO) -->
+        <section class="screen style-neon" data-design="9">
+            <div class="neon-wrapper">
+                <div class="neon-tube-top" id="tube-top"></div>
+                <div class="neon-row">
+                    <span class="neon-digit" id="nh1">0</span>
+                    <span class="neon-digit" id="nh2">0</span>
+                    <span class="neon-sep">:</span>
+                    <span class="neon-digit" id="nm1">0</span>
+                    <span class="neon-digit" id="nm2">0</span>
+                </div>
+                <div class="neon-bar-bottom" id="neon-bar"></div>
+                <div class="neon-date" id="neon-date">--/--</div>
+                <div class="neon-tube-bottom" id="tube-bottom"></div>
+            </div>
+        </section>
+
+        <!-- 10. TITAN (4 DÍGITOS INDIVIDUALES) -->
+        <section class="screen style-titan" data-design="10">
+            <div class="date-info" style="bottom: 3vh; right: 3vw;">--/--</div>
+            <span class="titan-digit d1" id="t1" data-text="0">0</span>
+            <span class="titan-digit d2" id="t2" data-text="0">0</span>
+            <span class="sep-titan" id="t-sep">:</span>
+            <span class="titan-digit d3" id="t3" data-text="0">0</span>
+            <span class="titan-digit d4" id="t4" data-text="0">0</span>
+        </section>
+
+    </main>
+
+    <script>
+        // ================================================================
+        // ===== CONFIGURACIÓN DE COLORES POR DISEÑO =====
+        // ================================================================
+        const DESIGN_COLORS = {
+            1: { bg: '#000000', box: '#1a1a1a', hour: '#ffffff', sep: '#ff2d55', scan: '#ff2d55' },
+            2: { bg: '#000000', hour: '#ffffff', min: '#00f2ff', sep: '#ff2d55' },
+            3: { bg: '#000000', d1: '#FF3B30', d2: '#FF9500', d3: '#4CD964', d4: '#007AFF', sep: '#ff2d55' },
+            4: { bg: '#000000', hour: '#ffffff', min: '#ffffff', sep: '#ff2d55', barH: '#ff2d55', barM: '#ff2d55' },
+            5: { bg: '#000000', boxH: '#ffffff', boxM: '#ffffff', shadowH: '#ff2d55', shadowM: '#00f2ff' },
+            6: { bgL: '#000000', bgR: '#ffffff', sep: '#ff2d55', shadow: '#999999' },
+            7: { bg: '#000000', hour: '#ffffff', min: '#00f2ff', sep: '#ff2d55' },
+            8: { bg: '#000000', digit: '#00ff41' },
+            9: { bg: '#000000', neon: '#ff2d55' },
+            10: { bg: '#000000', d1: '#ffffff', d2: '#ffffff', d3: '#ffffff', d4: '#ffffff', sep: 'rgba(255,255,255,0.6)' }
+        };
+
+        let currentDesign = 1;
+        let currentDepthFont = 'alfa';
+
+        // ================================================================
+        // ===== INICIO =====
+        // ================================================================
+        function startApp() {
+            const overlay = document.getElementById('start-overlay');
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.style.display = 'none';
+                document.getElementById('btn-ui').style.display = 'block';
+            }, 400);
+            const el = document.documentElement;
+            const rfs = el.requestFullscreen || el.webkitRequestFullScreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+            if (rfs) rfs.call(el).catch(e => console.log("FS Blocked"));
+        }
+
+        function showUI() {
+            const btn = document.getElementById('btn-ui');
+            btn.style.opacity = "1";
+            clearTimeout(window.uit);
+            window.uit = setTimeout(() => { 
+                if(!document.getElementById('config').classList.contains('open')) btn.style.opacity = "0"; 
+            }, 3000);
+        }
+
+        // ================================================================
+        // ===== MATRIX CANVAS (FULLSCREEN) =====
+        // ================================================================
+        const canvas = document.getElementById('matrix-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        
+        const drops = Array(Math.floor(canvas.width / 20)).fill(1);
+        
+        function drawMatrix() {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#0F0";
+            ctx.font = "20px monospace";
+            drops.forEach((y, i) => {
+                const text = String.fromCharCode(0x30A0 + Math.random() * 96);
+                ctx.fillText(text, i * 20, y * 20);
+                if (y * 20 > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                drops[i]++;
+            });
+        }
+        setInterval(drawMatrix, 50);
+
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            drops.length = 0;
+            for (let i = 0; i < Math.floor(canvas.width / 20); i++) {
+                drops.push(1);
+            }
+        });
+
+        // ================================================================
+        // ===== DISEÑO 1: SPLIT-FLAP CON SCAN =====
+        // ================================================================
+        let prevFlap = { h1: '0', h2: '0', m1: '0', m2: '0', s1: '0', s2: '0' };
+
+        function updateFlap(id, newVal) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const oldVal = el.textContent;
+            if (oldVal === newVal) return;
+            el.textContent = newVal;
+        }
+
+        function updateFlapDigits(h, m, s) {
+            const hh = String(h).padStart(2, '0');
+            const mm = String(m).padStart(2, '0');
+            const ss = String(s).padStart(2, '0');
+            updateFlap('h1', hh[0]);
+            updateFlap('h2', hh[1]);
+            updateFlap('m1', mm[0]);
+            updateFlap('m2', mm[1]);
+            updateFlap('s1', ss[0]);
+            updateFlap('s2', ss[1]);
+        }
+
+        function triggerScan() {
+            const scanElements = ['scan-h', 'scan-m', 'scan-s'];
+            scanElements.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.classList.remove('active');
+                    void el.offsetWidth;
+                    el.classList.add('active');
+                }
+            });
+        }
+
+        // ================================================================
+        // ===== DISEÑO 6: DEPTH 3D (MITADES COMPLETAS) =====
+        // ================================================================
+        function updateDepth(h, m) {
+            const hh = String(h).padStart(2, '0');
+            const mm = String(m).padStart(2, '0');
+            document.getElementById('d6-h').textContent = hh;
+            document.getElementById('d6-m').textContent = mm;
+        }
+
+        function applyDepthColors(bgL, bgR, sepColor, shadowColor) {
+            const left = document.getElementById('depth-left');
+            const right = document.getElementById('depth-right');
+            const sep = document.getElementById('d6-sep');
+            const hText = document.getElementById('d6-h');
+            const mText = document.getElementById('d6-m');
+            
+            if (left) {
+                left.style.background = bgL;
+                if (hText) hText.style.color = bgR;
+                left.style.setProperty('--depth-shadow', shadowColor);
+            }
+            if (right) {
+                right.style.background = bgR;
+                if (mText) mText.style.color = bgL;
+                right.style.setProperty('--depth-shadow', shadowColor);
+            }
+            if (sep) {
+                sep.style.color = sepColor;
+            }
+        }
+
+        function setDepthFont(font) {
+            currentDepthFont = font;
+            const screen = document.querySelector('.style-depth');
+            if (!screen) return;
+            screen.classList.remove('font-alfa', 'font-shortstack', 'font-playwrite');
+            screen.classList.add(`font-${font}`);
+        }
+
+        // ================================================================
+        // ===== DISEÑO 8: MATRIX =====
+        // ================================================================
+        function updateMatrixDigits(h, m, s) {
+            const hh = String(h).padStart(2, '0');
+            const mm = String(m).padStart(2, '0');
+            const ss = String(s).padStart(2, '0');
+            document.getElementById('mh1').textContent = hh[0];
+            document.getElementById('mh2').textContent = hh[1];
+            document.getElementById('mm1').textContent = mm[0];
+            document.getElementById('mm2').textContent = mm[1];
+            document.getElementById('ms1').textContent = ss[0];
+            document.getElementById('ms2').textContent = ss[1];
+        }
+
+        // ================================================================
+        // ===== DISEÑO 9: NEON =====
+        // ================================================================
+        let neonGlowActive = false;
+        let neonTimeout = null;
+
+        function toggleNeonGlow() {
+            neonGlowActive = !neonGlowActive;
+            const elements = document.querySelectorAll('.style-neon .neon-digit, .style-neon .neon-sep, .style-neon .neon-bar-bottom, .style-neon .neon-date, .style-neon .neon-tube-top, .style-neon .neon-tube-bottom');
+            elements.forEach(el => {
+                if (neonGlowActive) {
+                    el.classList.add('glow');
+                } else {
+                    el.classList.remove('glow');
+                }
+            });
+            const digits = document.querySelectorAll('.style-neon .neon-digit');
+            digits.forEach(el => {
+                if (neonGlowActive) {
+                    el.classList.add('sweep');
+                } else {
+                    el.classList.remove('sweep');
+                }
+            });
+        }
+
+        function startNeonGlowCycle() {
+            function cycle() {
+                toggleNeonGlow();
+                neonTimeout = setTimeout(() => {
+                    toggleNeonGlow();
+                    neonTimeout = setTimeout(cycle, 3000);
+                }, 2000);
+            }
+            cycle();
+        }
+
+        function updateNeonDigits(h, m) {
+            const hh = String(h).padStart(2, '0');
+            const mm = String(m).padStart(2, '0');
+            document.getElementById('nh1').textContent = hh[0];
+            document.getElementById('nh2').textContent = hh[1];
+            document.getElementById('nm1').textContent = mm[0];
+            document.getElementById('nm2').textContent = mm[1];
+        }
+
+        // ================================================================
+        // ===== DISEÑO 10: TITAN (4 DÍGITOS) =====
+        // ================================================================
+        function updateTitan(h, m) {
+            const hh = String(h).padStart(2, '0');
+            const mm = String(m).padStart(2, '0');
+            const d1 = document.getElementById('t1');
+            const d2 = document.getElementById('t2');
+            const d3 = document.getElementById('t3');
+            const d4 = document.getElementById('t4');
+            if (d1) { d1.textContent = hh[0]; d1.setAttribute('data-text', hh[0]); }
+            if (d2) { d2.textContent = hh[1]; d2.setAttribute('data-text', hh[1]); }
+            if (d3) { d3.textContent = mm[0]; d3.setAttribute('data-text', mm[0]); }
+            if (d4) { d4.textContent = mm[1]; d4.setAttribute('data-text', mm[1]); }
+        }
+
+        function applyTitanColors(d1Color, d2Color, d3Color, d4Color, sepColor) {
+            const d1 = document.getElementById('t1');
+            const d2 = document.getElementById('t2');
+            const d3 = document.getElementById('t3');
+            const d4 = document.getElementById('t4');
+            const sep = document.getElementById('t-sep');
+            if (d1) { d1.style.color = d1Color; updateTitanPseudo('t1', d1Color); }
+            if (d2) { d2.style.color = d2Color; updateTitanPseudo('t2', d2Color); }
+            if (d3) { d3.style.color = d3Color; updateTitanPseudo('t3', d3Color); }
+            if (d4) { d4.style.color = d4Color; updateTitanPseudo('t4', d4Color); }
+            if (sep) { sep.style.color = sepColor; sep.style.opacity = '0.6'; }
+        }
+
+        function updateTitanPseudo(id, color) {
+            const style = document.createElement('style');
+            style.id = `titan-${id}-style`;
+            const oldStyle = document.getElementById(`titan-${id}-style`);
+            if (oldStyle) oldStyle.remove();
+            style.textContent = `#${id}::before { color: ${color} !important; opacity: 0.2 !important; }`;
+            document.head.appendChild(style);
+        }
+
+        // ================================================================
+        // ===== ACTUALIZAR RELOJ =====
+        // ================================================================
+        let lastSecond = -1;
+
+        function update() {
+            const now = new Date();
+            const h12 = document.getElementById('in-12').checked;
+            const sDate = document.getElementById('in-date').checked;
+            
+            let h = now.getHours();
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const s = String(now.getSeconds()).padStart(2, '0');
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            if(h12) h = h % 12 || 12;
+            const hh = String(h).padStart(2, '0');
+            const dStr = now.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+
+            updateFlapDigits(h, parseInt(m), parseInt(s));
+            updateDepth(h, parseInt(m));
+            updateMatrixDigits(h, parseInt(m), parseInt(s));
+            updateNeonDigits(h, parseInt(m));
+            document.getElementById('neon-date').textContent = dStr.toUpperCase();
+            updateTitan(h, parseInt(m));
+
+            if (s !== lastSecond) {
+                lastSecond = s;
+                setTimeout(triggerScan, 50);
+            }
+
+            document.querySelectorAll('.screen').forEach(scr => {
+                const hv = scr.querySelector('.hour-val');
+                const mv = scr.querySelector('.min-val');
+                const dv = scr.querySelector('.date-info');
+                
+                if (hv && !scr.classList.contains('style-multi') && !scr.classList.contains('style-neon') && !scr.classList.contains('style-matrix') && !scr.classList.contains('style-depth') && !scr.classList.contains('style-titan')) {
+                    hv.textContent = hh;
+                }
+                if (mv && !scr.classList.contains('style-multi') && !scr.classList.contains('style-neon') && !scr.classList.contains('style-matrix') && !scr.classList.contains('style-depth') && !scr.classList.contains('style-titan')) {
+                    mv.textContent = m;
+                }
+                if (dv) {
+                    dv.innerHTML = dStr + (h12 ? ` <span class="ampm-info">${ampm}</span>` : '');
+                    dv.style.display = sDate ? 'block' : 'none';
+                }
+                
+                if (scr.classList.contains('style-multi')) {
+                    const d1 = scr.querySelector('.d1');
+                    const d2 = scr.querySelector('.d2');
+                    const d3 = scr.querySelector('.d3');
+                    const d4 = scr.querySelector('.d4');
+                    if (d1) d1.textContent = hh[0];
+                    if (d2) d2.textContent = hh[1];
+                    if (d3) d3.textContent = m[0];
+                    if (d4) d4.textContent = m[1];
+                }
+            });
+
+            applyColors(currentDesign);
+        }
+
+        // ================================================================
+        // ===== APLICAR COLORES POR DISEÑO =====
+        // ================================================================
+        function applyColors(designId) {
+            const colors = DESIGN_COLORS[designId];
+            if (!colors) return;
+            
+            const screens = document.querySelectorAll('.screen');
+            screens.forEach(scr => {
+                const id = parseInt(scr.dataset.design);
+                if (id !== designId) return;
+                
+                if (id === 1) {
+                    scr.style.backgroundColor = colors.bg;
+                    scr.querySelectorAll('.flap-box').forEach(box => { box.style.background = colors.box; });
+                    scr.querySelectorAll('.flap-digit').forEach(el => el.style.color = colors.hour);
+                    scr.querySelectorAll('.sep-flap').forEach(el => el.style.color = colors.sep);
+                    scr.querySelectorAll('.flap-divider').forEach(el => {
+                        el.style.background = colors.sep;
+                        el.style.boxShadow = `0 0 10px ${colors.sep}33`;
+                    });
+                    scr.querySelectorAll('.scan-light').forEach(el => {
+                        el.style.background = `linear-gradient(90deg, transparent, ${colors.scan}44, transparent)`;
+                    });
+                }
+                else if (id === 2) {
+                    scr.style.backgroundColor = colors.bg;
+                    scr.querySelector('.hour-val').style.color = colors.hour;
+                    scr.querySelector('.min-val').style.color = colors.min;
+                    scr.querySelector('.sep').style.color = colors.sep;
+                }
+                else if (id === 3) {
+                    scr.style.backgroundColor = colors.bg;
+                    scr.querySelector('.d1').style.color = colors.d1;
+                    scr.querySelector('.d2').style.color = colors.d2;
+                    scr.querySelector('.d3').style.color = colors.d3;
+                    scr.querySelector('.d4').style.color = colors.d4;
+                    scr.querySelector('.sep-multi').style.color = colors.sep;
+                }
+                else if (id === 4) {
+                    scr.style.backgroundColor = colors.bg;
+                    scr.querySelector('.hour-val').style.color = colors.hour;
+                    scr.querySelector('.min-val').style.color = colors.min;
+                    scr.querySelector('.sep-red').style.color = colors.sep;
+                    document.getElementById('bar-h').style.background = colors.barH;
+                    document.getElementById('bar-m').style.background = colors.barM;
+                }
+                else if (id === 5) {
+                    scr.style.backgroundColor = colors.bg;
+                    document.getElementById('neo-h').style.background = colors.boxH;
+                    document.getElementById('neo-h').style.boxShadow = `15px 15px 0 ${colors.shadowH}`;
+                    document.getElementById('neo-m').style.background = colors.boxM;
+                    document.getElementById('neo-m').style.boxShadow = `-15px 15px 0 ${colors.shadowM}`;
+                }
+                else if (id === 6) {
+                    applyDepthColors(colors.bgL, colors.bgR, colors.sep, colors.shadow || '#999999');
+                }
+                else if (id === 7) {
+                    scr.style.backgroundColor = colors.bg;
+                    scr.querySelector('.hour-val').style.color = colors.hour;
+                    scr.querySelector('.min-val').style.color = colors.min;
+                    scr.querySelector('.sep-elegant').style.color = colors.sep;
+                }
+                else if (id === 8) {
+                    scr.style.backgroundColor = colors.bg;
+                    const digitColor = colors.digit;
+                    scr.querySelectorAll('.hour-val, .min-val, .sec-val, .sep-matrix').forEach(el => {
+                        el.style.webkitTextStroke = `2px ${digitColor}`;
+                        el.style.textStroke = `2px ${digitColor}`;
+                        el.style.color = 'transparent';
+                        el.style.textShadow = 'none';
+                    });
+                    const dateInfo = scr.querySelector('.date-info');
+                    if (dateInfo) {
+                        dateInfo.style.webkitTextStroke = `1px ${digitColor}`;
+                        dateInfo.style.textStroke = `1px ${digitColor}`;
+                        dateInfo.style.color = 'transparent';
+                        dateInfo.style.background = 'transparent';
+                        dateInfo.style.fontFamily = "'Share Tech Mono', monospace";
+                    }
+                }
+                else if (id === 9) {
+                    scr.style.backgroundColor = colors.bg;
+                    const neonColor = colors.neon;
+                    scr.querySelectorAll('.neon-digit, .neon-sep, .neon-date').forEach(el => {
+                        el.style.webkitTextStroke = `2px ${neonColor}`;
+                        el.style.textStroke = `2px ${neonColor}`;
+                        if (el.classList.contains('glow')) {
+                            el.style.color = neonColor;
+                            el.style.textShadow = `0 0 10px ${neonColor}, 0 0 20px ${neonColor}, 0 0 40px ${neonColor}`;
+                        } else {
+                            el.style.color = 'transparent';
+                            el.style.textShadow = 'none';
+                        }
+                    });
+                    scr.querySelectorAll('.neon-tube-top, .neon-tube-bottom, .neon-bar-bottom').forEach(el => {
+                        if (el.classList.contains('glow')) {
+                            el.style.background = neonColor;
+                            el.style.boxShadow = `0 0 15px ${neonColor}`;
+                        } else {
+                            el.style.background = `${neonColor}33`;
+                            el.style.boxShadow = 'none';
+                        }
+                    });
+                }
+                else if (id === 10) {
+                    scr.style.backgroundColor = colors.bg;
+                    applyTitanColors(colors.d1, colors.d2, colors.d3, colors.d4, colors.sep);
+                }
+            });
+        }
+
+        // ================================================================
+        // ===== MENÚ: GENERAR PANELES =====
+        // ================================================================
+        function buildMenu() {
+            const panels = document.getElementById('color-panels');
+            panels.innerHTML = '';
+            
+            for (let i = 1; i <= 10; i++) {
+                const panel = document.createElement('div');
+                panel.className = 'color-group';
+                panel.id = `panel-${i}`;
+                panel.style.display = i === currentDesign ? 'block' : 'none';
+                panel.innerHTML = buildColorPanel(i);
+                panels.appendChild(panel);
+            }
+        }
+
+        function buildColorPanel(id) {
+            const colors = DESIGN_COLORS[id];
+            let html = `<div class="cg-title">Diseño ${id}</div>`;
+            
+            const fields = {
+                1: [
+                    { key: 'bg', label: 'Fondo' },
+                    { key: 'box', label: 'Caja' },
+                    { key: 'hour', label: 'Dígitos' },
+                    { key: 'sep', label: 'Separador' },
+                    { key: 'scan', label: 'Scan' }
+                ],
+                2: [
+                    { key: 'bg', label: 'Fondo' },
+                    { key: 'hour', label: 'Horas' },
+                    { key: 'min', label: 'Minutos' },
+                    { key: 'sep', label: 'Separador' }
+                ],
+                3: [
+                    { key: 'bg', label: 'Fondo' },
+                    { key: 'd1', label: 'D1' },
+                    { key: 'd2', label: 'D2' },
+                    { key: 'd3', label: 'D3' },
+                    { key: 'd4', label: 'D4' },
+                    { key: 'sep', label: 'Separador' }
+                ],
+                4: [
+                    { key: 'bg', label: 'Fondo' },
+                    { key: 'hour', label: 'Horas' },
+                    { key: 'min', label: 'Minutos' },
+                    { key: 'sep', label: 'Separador' },
+                    { key: 'barH', label: 'Barra H' },
+                    { key: 'barM', label: 'Barra M' }
+                ],
+                5: [
+                    { key: 'bg', label: 'Fondo' },
+                    { key: 'boxH', label: 'Caja H' },
+                    { key: 'boxM', label: 'Caja M' },
+                    { key: 'shadowH', label: 'Sombra H' },
+                    { key: 'shadowM', label: 'Sombra M' }
+                ],
+                6: [
+                    { key: 'bgL', label: 'Color Horas' },
+                    { key: 'bgR', label: 'Color Minutos' },
+                    { key: 'sep', label: 'Separador' },
+                    { key: 'shadow', label: 'Sombra 3D' }
+                ],
+                7: [
+                    { key: 'bg', label: 'Fondo' },
+                    { key: 'hour', label: 'Horas' },
+                    { key: 'min', label: 'Minutos' },
+                    { key: 'sep', label: 'Separador' }
+                ],
+                8: [
+                    { key: 'bg', label: 'Fondo' },
+                    { key: 'digit', label: 'Dígitos' }
+                ],
+                9: [
+                    { key: 'bg', label: 'Fondo' },
+                    { key: 'neon', label: 'Neón' }
+                ],
+                10: [
+                    { key: 'bg', label: 'Fondo' },
+                    { key: 'd1', label: 'D1' },
+                    { key: 'd2', label: 'D2' },
+                    { key: 'd3', label: 'D3' },
+                    { key: 'd4', label: 'D4' },
+                    { key: 'sep', label: 'Separador' }
+                ]
+            };
+            
+            const f = fields[id] || [];
+            f.forEach(field => {
+                const val = colors[field.key] || '#ffffff';
+                html += `
+                    <div class="color-row">
+                        <label>${field.label}</label>
+                        <input type="color" value="${val}" 
+                               data-design="${id}" data-key="${field.key}"
+                               oninput="updateColor(${id}, '${field.key}', this.value)">
+                    </div>
+                `;
+            });
+            
+            if (id === 6) {
+                html += `
+                    <div class="color-row" style="margin-top:8px; border-top:1px solid rgba(255,255,255,0.05); padding-top:10px;">
+                        <label style="min-width:50px;">Fuente</label>
+                        <div class="font-selector" id="font-selector-6">
+                            <button class="font-btn active" data-font="alfa">Alfa Slab</button>
+                            <button class="font-btn" data-font="shortstack">Short Stack</button>
+                            <button class="font-btn" data-font="playwrite">Playwrite</button>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            return html;
+        }
+
+        function updateColor(designId, key, value) {
+            if (!DESIGN_COLORS[designId]) return;
+            DESIGN_COLORS[designId][key] = value;
+            const inputs = document.querySelectorAll(`#panel-${designId} input[data-key="${key}"]`);
+            inputs.forEach(inp => inp.value = value);
+            applyColors(designId);
+        }
+
+        // ================================================================
+        // ===== DETECTAR DISEÑO VISIBLE =====
+        // ================================================================
+        function detectVisibleDesign() {
+            const slider = document.getElementById('slider');
+            const scrollLeft = slider.scrollLeft;
+            const screenWidth = window.innerWidth;
+            const index = Math.round(scrollLeft / screenWidth);
+            const screens = document.querySelectorAll('.screen');
+            if (screens[index]) {
+                const id = parseInt(screens[index].dataset.design);
+                if (id && id !== currentDesign) {
+                    currentDesign = id;
+                    document.querySelectorAll('.color-group').forEach(p => {
+                        p.style.display = 'none';
+                    });
+                    const panel = document.getElementById(`panel-${id}`);
+                    if (panel) panel.style.display = 'block';
+                    applyColors(id);
+                    
+                    if (id === 6) {
+                        const fontSelector = document.getElementById('font-selector-6');
+                        if (fontSelector) {
+                            fontSelector.querySelectorAll('.font-btn').forEach(btn => {
+                                btn.addEventListener('click', () => {
+                                    fontSelector.querySelectorAll('.font-btn').forEach(b => b.classList.remove('active'));
+                                    btn.classList.add('active');
+                                    setDepthFont(btn.dataset.font);
+                                });
+                            });
+                        }
+                    }
+                    
+                    if (id === 9) {
+                        if (!neonTimeout) startNeonGlowCycle();
+                    } else {
+                        if (neonTimeout) {
+                            clearTimeout(neonTimeout);
+                            neonTimeout = null;
+                            if (neonGlowActive) toggleNeonGlow();
+                        }
+                    }
+                }
+            }
+        }
+
+        // ================================================================
+        // ===== INICIALIZAR =====
+        // ================================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            buildMenu();
+            update();
+            setInterval(update, 1000);
+            
+            const slider = document.getElementById('slider');
+            slider.addEventListener('scroll', detectVisibleDesign);
+            
+            document.getElementById('in-12').addEventListener('change', update);
+            document.getElementById('in-date').addEventListener('change', update);
+            
+            setTimeout(() => {
+                applyColors(1);
+                detectVisibleDesign();
+                startNeonGlowCycle();
+            }, 100);
+        });
+    </script>
+</body>
+</html>
