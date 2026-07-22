@@ -1,30 +1,36 @@
-const CACHE_NAME = 'studio-clock-v1';
-const assets = [
-  './',
-  './index.html',
-  './manifest.json'
-];
+const CACHE_NAME = 'studio-clock-v2'; // Cambié a v2 para forzar actualización
 
-// Instalar y cachear archivos
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(assets);
+      return cache.addAll(['./index.html', './manifest.json']);
     })
   );
 });
 
-// Activar y limpiar caches antiguos
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    Promise.all([
+      self.clients.claim(),
+      // Limpiar caches antiguos
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            if (cacheName !== CACHE_NAME) {
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      })
+    ])
+  );
 });
 
-// Responder peticiones incluso sin internet
 self.addEventListener('fetch', (event) => {
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
+    fetch(event.request).catch(() => {
+      return caches.match(event.request);
     })
   );
 });
