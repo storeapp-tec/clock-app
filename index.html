@@ -833,7 +833,16 @@
         </section>
 
     </main>
-
+    <script>
+        // REGISTRO DEL SERVICE WORKER (Colocado justo al inicio del script)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js') 
+                    .then(reg => console.log('Service Worker registrado', reg))
+                    .catch(err => console.log('Error al registrar SW', err));
+            });
+        }
+    </script>
     <script>
         // ================================================================
         // ===== CONFIGURACIÓN DE COLORES POR DISEÑO =====
