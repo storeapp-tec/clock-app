@@ -1,22 +1,439 @@
-<!doctype html>
-<html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Studio Clock" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="theme-color" content="#000000" />
-    <title>Studio Clock - Reloj de Mesa & Estudio</title>
-    <meta name="description" content="Reloj de mesa inmersivo con 10 estilos visuales personalizables y pantalla siempre activa." />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Anton&family=Bebas+Neue&family=Bodoni+Moda:ital,opsz,wght@0,6..96,700;0,6..96,900;1,6..96,700;1,6..96,900&family=Caveat:wght@600;700&family=Cinzel:wght@700;900&family=Dancing+Script:wght@700&family=Great+Vibes&family=Gruppo&family=JetBrains+Mono:wght@700;800&family=Megrim&family=Monoton&family=Orbitron:wght@700;900&family=Oswald:wght@600;700&family=Pacifico&family=Playfair+Display:ital,wght@0,700;0,900;1,700;1,900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Press+Start+2P&family=Righteous&family=Sacramento&family=Share+Tech+Mono&family=Short+Stack&family=Silkscreen:wght@700&family=Syne:wght@700;800&family=Syncopate:wght@700&family=Tektur:wght@700;900&family=Unbounded:wght@700;900&family=VT323&display=swap" rel="stylesheet">
-  </head>
-  <body class="bg-black text-white select-none overflow-hidden touch-manipulation m-0 p-0">
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
+<!DOCTYPE html>
+<html lang="es" class="h-full w-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Reloj Digital & Inmersivo</title>
+  <meta name="theme-color" content="#030712" />
+  <link rel="manifest" href="manifest.json" />
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
 
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=DotGothic16&family=Fira+Code:wght@400;600;700&family=Inter:wght@300;400;600;800;900&family=JetBrains+Mono:wght@400;700;800&family=Major+Mono+Display&family=Montserrat:wght@200;400;700;900&family=Orbitron:wght@400;700;900&family=Oswald:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Press+Start+2P&family=Righteous&family=Share+Tech+Mono&family=Space+Grotesk:wght@400;700&family=Syne:wght@700;800&family=VT323&display=swap" rel="stylesheet" />
+
+  <style>
+    * { user-select: none; -webkit-user-select: none; }
+    body { background-color: #030712; overflow: hidden; touch-action: pan-y pinch-zoom; }
+    .perspective-1000 { perspective: 1000px; }
+    .flap-card { transform-style: preserve-3d; }
+    .text-glow-cyber { text-shadow: 0 0 20px rgba(6, 182, 212, 0.6), 0 0 40px rgba(6, 182, 212, 0.3); }
+    .text-glow-neon { text-shadow: 0 0 10px currentColor, 0 0 25px currentColor, 0 0 50px currentColor; }
+    .casio-lcd { background-color: #92a488; color: #162415; text-shadow: -1px -1px 0 rgba(255,255,255,0.2); }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="h-full w-full flex flex-col justify-between items-center text-white relative transition-colors duration-500 font-sans select-none">
+
+  <!-- OVERLAY DE BRILLO -->
+  <div id="brightness-overlay" class="pointer-events-none fixed inset-0 z-40 bg-black transition-opacity duration-300 opacity-0"></div>
+
+  <!-- BARRA SUPERIOR FLOTANTE -->
+  <header id="top-bar" class="w-full max-w-6xl px-6 pt-6 flex justify-between items-center z-30 transition-opacity duration-500 opacity-100">
+    <div id="date-badge" class="px-4 py-1.5 rounded-full backdrop-blur-md bg-white/5 border border-white/10 text-xs sm:text-sm font-medium tracking-wider text-neutral-300">
+      Cargando fecha...
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="btn-fullscreen" class="p-2.5 rounded-full bg-white/5 hover:bg-white/15 backdrop-blur-md border border-white/10 text-neutral-300 hover:text-white transition active:scale-95">
+        <i data-lucide="maximize" class="w-5 h-5"></i>
+      </button>
+      <button id="btn-settings" class="p-2.5 rounded-full bg-white/5 hover:bg-white/15 backdrop-blur-md border border-white/10 text-neutral-300 hover:text-white transition active:scale-95">
+        <i data-lucide="settings-2" class="w-5 h-5"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- CONTENEDOR CENTRAL DEL RELOJ -->
+  <main id="clock-container" class="flex-1 w-full flex items-center justify-center px-4 relative z-10 overflow-hidden cursor-pointer">
+    <!-- El reloj activo se inyecta dinámicamente aquí -->
+  </main>
+
+  <!-- BARRA INFERIOR / PAGINACIÓN -->
+  <footer id="bottom-bar" class="w-full pb-8 flex flex-col items-center gap-3 z-30 transition-opacity duration-500 opacity-100">
+    <div class="flex items-center gap-2 bg-neutral-900/80 backdrop-blur-lg px-3 py-1.5 rounded-full border border-white/10 shadow-2xl">
+      <button id="btn-prev" class="p-1.5 text-neutral-400 hover:text-white transition">
+        <i data-lucide="chevron-left" class="w-4 h-4"></i>
+      </button>
+      <div id="theme-indicators" class="flex items-center gap-1.5 px-2"></div>
+      <button id="btn-next" class="p-1.5 text-neutral-400 hover:text-white transition">
+        <i data-lucide="chevron-right" class="w-4 h-4"></i>
+      </button>
+    </div>
+    <span id="theme-name" class="text-xs tracking-widest uppercase font-semibold text-neutral-400"></span>
+  </footer>
+
+  <!-- PANEL LATERAL DE AJUSTES (DRAWER) -->
+  <div id="drawer-backdrop" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 transition-opacity duration-300 opacity-0 pointer-events-none"></div>
+  <aside id="drawer" class="fixed top-0 right-0 h-full w-full max-w-sm bg-neutral-950/95 border-l border-neutral-800 z-50 transform translate-x-full transition-transform duration-300 ease-out flex flex-col p-6 overflow-y-auto no-scrollbar shadow-2xl">
+    <div class="flex items-center justify-between pb-4 border-b border-neutral-800">
+      <div class="flex items-center gap-2 text-white font-bold text-lg">
+        <i data-lucide="sliders" class="w-5 h-5 text-emerald-400"></i> Ajustes de Reloj
+      </div>
+      <button id="btn-close-drawer" class="p-2 text-neutral-400 hover:text-white rounded-lg hover:bg-white/5 transition">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <div class="space-y-6 mt-6 text-sm text-neutral-200">
+      <!-- FORMATO 12h / 24h -->
+      <div>
+        <label class="block text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Formato de Hora</label>
+        <div class="grid grid-cols-2 gap-2 p-1 bg-neutral-900 rounded-xl border border-neutral-800">
+          <button id="btn-fmt-12" class="py-2 rounded-lg font-medium transition text-center">12 Horas (AM/PM)</button>
+          <button id="btn-fmt-24" class="py-2 rounded-lg font-medium transition text-center">24 Horas Militar</button>
+        </div>
+      </div>
+
+      <!-- MOSTRAR SEGUNDOS -->
+      <div class="flex items-center justify-between py-2 border-y border-neutral-900">
+        <div>
+          <div class="font-medium text-white">Mostrar Segundos</div>
+          <div class="text-xs text-neutral-400">Fluidez en tiempo real</div>
+        </div>
+        <input type="checkbox" id="toggle-seconds" class="w-5 h-5 rounded accent-emerald-500 cursor-pointer" />
+      </div>
+
+      <!-- CONTROL DE BRILLO / NOCHE -->
+      <div>
+        <div class="flex justify-between items-center mb-2">
+          <label class="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Atenuador de Brillo (Modo Noche)</label>
+          <span id="label-brightness" class="text-xs text-neutral-400">100%</span>
+        </div>
+        <input type="range" id="slider-brightness" min="10" max="100" value="100" class="w-full accent-emerald-500 cursor-pointer" />
+      </div>
+
+      <!-- COLOR PRINCIPAL -->
+      <div>
+        <label class="block text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Color de Acento</label>
+        <div class="flex items-center gap-3">
+          <input type="color" id="picker-color" class="w-10 h-10 rounded-lg cursor-pointer bg-transparent border-0" value="#10b981" />
+          <span id="label-color" class="text-xs font-mono text-neutral-300">#10b981</span>
+        </div>
+      </div>
+
+      <!-- TIPOGRAFÍA -->
+      <div>
+        <label class="block text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Familia Tipográfica</label>
+        <select id="select-font" class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-emerald-500">
+          <option value="JetBrains Mono">JetBrains Mono (Digital)</option>
+          <option value="Orbitron">Orbitron (Cyber)</option>
+          <option value="VT323">VT323 (Retro LCD)</option>
+          <option value="Cinzel">Cinzel (Clásico Romano)</option>
+          <option value="Montserrat">Montserrat (Moderno)</option>
+          <option value="Syne">Syne (Bold Editorial)</option>
+          <option value="Fira Code">Fira Code (Monospace)</option>
+        </select>
+      </div>
+
+      <!-- BOTÓN RESTABLECER -->
+      <button id="btn-reset" class="w-full py-3 mt-4 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl font-medium transition">
+        Restablecer Ajustes
+      </button>
+    </div>
+  </aside>
+
+  <!-- JAVASCRIPT PRINCIPAL INTEGRADO -->
+  <script>
+    // LISTA DE DISEÑOS
+    const DESIGNS = [
+      { id: 'split-flap', name: 'Split-Flap Airport' },
+      { id: 'cyber', name: 'Cyberpunk HUD' },
+      { id: 'bauhaus', name: 'Bauhaus Modern' },
+      { id: 'braun', name: 'Braun Minimal' },
+      { id: 'casio', name: 'Casio Digital Chrono' },
+      { id: 'neon', name: 'Neon Atelier' },
+      { id: 'smartwatch', name: 'Smartwatch OLED' },
+      { id: 'aurora', name: 'Aurora Fluid' }
+    ];
+
+    // ESTADO
+    let state = {
+      themeIndex: parseInt(localStorage.getItem('theme_idx') || '0'),
+      is24h: localStorage.getItem('is24h') === 'true',
+      showSeconds: localStorage.getItem('showSeconds') !== 'false',
+      brightness: parseInt(localStorage.getItem('brightness') || '100'),
+      accentColor: localStorage.getItem('accentColor') || '#10b981',
+      fontFamily: localStorage.getItem('fontFamily') || 'JetBrains Mono'
+    };
+
+    // ELEMENTOS DOM
+    const clockContainer = document.getElementById('clock-container');
+    const dateBadge = document.getElementById('date-badge');
+    const themeName = document.getElementById('theme-name');
+    const themeIndicators = document.getElementById('theme-indicators');
+    const brightnessOverlay = document.getElementById('brightness-overlay');
+    const topBar = document.getElementById('top-bar');
+    const bottomBar = document.getElementById('bottom-bar');
+    const drawer = document.getElementById('drawer');
+    const drawerBackdrop = document.getElementById('drawer-backdrop');
+
+    // TIEMPO
+    function getTime() {
+      const d = new Date();
+      let h = d.getHours();
+      let ampm = '';
+      if (!state.is24h) {
+        ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12 || 12;
+      }
+      return {
+        hours: String(h).padStart(2, '0'),
+        minutes: String(d.getMinutes()).padStart(2, '0'),
+        seconds: String(d.getSeconds()).padStart(2, '0'),
+        ampm: ampm,
+        raw: d
+      };
+    }
+
+    // ACTUALIZAR FECHA
+    function updateDateBadge() {
+      const now = new Date();
+      const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+      dateBadge.textContent = now.toLocaleDateString('es-ES', options).toUpperCase();
+    }
+
+    // RENDERIZADOR DE RELOJES
+    function renderClock() {
+      const t = getTime();
+      const design = DESIGNS[state.themeIndex];
+      themeName.textContent = design.name;
+      const font = state.fontFamily;
+      const col = state.accentColor;
+
+      let html = '';
+
+      if (design.id === 'split-flap') {
+        html = `
+          <div class="flex flex-col items-center gap-6" style="font-family: '${font}', monospace;">
+            <div class="flex items-center gap-3 sm:gap-6 perspective-1000">
+              <div class="bg-neutral-900 border border-neutral-700 rounded-2xl p-4 sm:p-8 text-5xl sm:text-8xl md:text-9xl font-extrabold text-white shadow-2xl relative overflow-hidden">
+                <div class="absolute inset-x-0 top-1/2 h-0.5 bg-black/80 z-20"></div>
+                ${t.hours}
+              </div>
+              <div class="text-4xl sm:text-7xl font-bold opacity-60" style="color: ${col};">:</div>
+              <div class="bg-neutral-900 border border-neutral-700 rounded-2xl p-4 sm:p-8 text-5xl sm:text-8xl md:text-9xl font-extrabold text-white shadow-2xl relative overflow-hidden">
+                <div class="absolute inset-x-0 top-1/2 h-0.5 bg-black/80 z-20"></div>
+                ${t.minutes}
+              </div>
+              ${state.showSeconds ? `
+                <div class="text-4xl sm:text-7xl font-bold opacity-60" style="color: ${col};">:</div>
+                <div class="bg-neutral-900 border border-neutral-700 rounded-2xl p-3 sm:p-6 text-3xl sm:text-6xl font-bold text-neutral-300 shadow-xl relative overflow-hidden">
+                  <div class="absolute inset-x-0 top-1/2 h-0.5 bg-black/80 z-20"></div>
+                  ${t.seconds}
+                </div>
+              ` : ''}
+            </div>
+            ${t.ampm ? `<span class="text-sm sm:text-lg tracking-widest px-4 py-1 rounded-full bg-neutral-800 border border-neutral-700 font-bold" style="color: ${col};">${t.ampm}</span>` : ''}
+          </div>
+        `;
+      } else if (design.id === 'cyber') {
+        html = `
+          <div class="flex flex-col items-center border border-cyan-500/30 bg-black/60 backdrop-blur-xl p-8 sm:p-12 rounded-3xl relative text-cyan-400" style="font-family: '${font}', monospace;">
+            <div class="absolute -top-3 left-6 text-xs uppercase tracking-widest px-2 bg-black border border-cyan-500/50 text-cyan-300 font-mono">SYS.TIME // TACTICAL</div>
+            <div class="flex items-baseline gap-2 sm:gap-4 text-6xl sm:text-8xl md:text-9xl font-black text-glow-cyber tracking-tight" style="color: ${col};">
+              <span>${t.hours}</span>
+              <span class="animate-pulse">:</span>
+              <span>${t.minutes}</span>
+              ${state.showSeconds ? `<span class="text-3xl sm:text-5xl font-mono text-cyan-200">${t.seconds}</span>` : ''}
+            </div>
+            ${t.ampm ? `<div class="mt-4 text-xs font-mono tracking-widest text-cyan-400 border border-cyan-500/40 px-3 py-0.5">${t.ampm} // MODE</div>` : ''}
+          </div>
+        `;
+      } else if (design.id === 'casio') {
+        html = `
+          <div class="casio-lcd p-8 sm:p-14 rounded-3xl border-8 border-neutral-800 shadow-2xl flex flex-col items-center" style="font-family: 'VT323', monospace;">
+            <div class="w-full flex justify-between text-base sm:text-xl font-bold tracking-widest mb-2 border-b border-black/20 pb-1">
+              <span>CASIO WR 50M</span>
+              <span>${t.ampm || '24H'}</span>
+            </div>
+            <div class="text-7xl sm:text-9xl font-bold tracking-wider">
+              ${t.hours}:${t.minutes}${state.showSeconds ? `<span class="text-4xl sm:text-6xl ml-2">${t.seconds}</span>` : ''}
+            </div>
+          </div>
+        `;
+      } else if (design.id === 'neon') {
+        html = `
+          <div class="flex flex-col items-center" style="font-family: 'Righteous', cursive, sans-serif;">
+            <div class="text-6xl sm:text-8xl md:text-9xl font-bold text-glow-neon flex items-center gap-2" style="color: ${col};">
+              <span>${t.hours}</span>
+              <span>:</span>
+              <span>${t.minutes}</span>
+              ${state.showSeconds ? `<span class="text-4xl sm:text-6xl ml-2 opacity-90">${t.seconds}</span>` : ''}
+            </div>
+            ${t.ampm ? `<span class="mt-4 text-xl sm:text-2xl text-glow-neon font-bold" style="color: ${col};">${t.ampm}</span>` : ''}
+          </div>
+        `;
+      } else if (design.id === 'smartwatch') {
+        html = `
+          <div class="flex flex-col items-center justify-center p-8 bg-neutral-900/90 rounded-[3rem] border border-white/10 shadow-2xl aspect-square w-72 sm:w-96" style="font-family: 'Inter', sans-serif;">
+            <div class="text-xs uppercase tracking-widest font-bold text-neutral-400 mb-2">Ultra Smartwatch</div>
+            <div class="text-7xl sm:text-8xl font-black tracking-tighter" style="color: ${col};">${t.hours}:${t.minutes}</div>
+            ${state.showSeconds ? `<div class="text-2xl sm:text-3xl font-semibold text-neutral-400 mt-1">${t.seconds}s</div>` : ''}
+            ${t.ampm ? `<div class="mt-2 text-xs font-bold px-3 py-1 bg-white/10 rounded-full">${t.ampm}</div>` : ''}
+          </div>
+        `;
+      } else {
+        // BAUHAUS & BRAUN & AURORA (Minimalistas)
+        html = `
+          <div class="flex flex-col items-center" style="font-family: '${font}', sans-serif;">
+            <div class="text-7xl sm:text-9xl md:text-[11rem] font-black tracking-tight leading-none" style="color: ${col};">
+              ${t.hours}:${t.minutes}
+            </div>
+            <div class="flex items-center gap-4 mt-4">
+              ${state.showSeconds ? `<span class="text-xl sm:text-3xl font-mono text-neutral-400">${t.seconds}</span>` : ''}
+              ${t.ampm ? `<span class="text-sm sm:text-base font-bold tracking-widest px-3 py-1 bg-white/10 rounded-full">${t.ampm}</span>` : ''}
+            </div>
+          </div>
+        `;
+      }
+
+      clockContainer.innerHTML = html;
+      lucide.createIcons();
+    }
+
+    // INDICADORES DE TEMA
+    function renderIndicators() {
+      themeIndicators.innerHTML = DESIGNS.map((_, i) => `
+        <button onclick="setTheme(${i})" class="w-2 h-2 rounded-full transition-all ${i === state.themeIndex ? 'w-6 bg-white' : 'bg-neutral-600 hover:bg-neutral-400'}"></button>
+      `).join('');
+    }
+
+    window.setTheme = function(index) {
+      state.themeIndex = (index + DESIGNS.length) % DESIGNS.length;
+      localStorage.setItem('theme_idx', state.themeIndex);
+      renderIndicators();
+      renderClock();
+    };
+
+    // BOTONES DE NAVEGACIÓN
+    document.getElementById('btn-prev').onclick = () => setTheme(state.themeIndex - 1);
+    document.getElementById('btn-next').onclick = () => setTheme(state.themeIndex + 1);
+
+    // GESTOS TÁCTILES SWIPE
+    let touchStartX = 0;
+    clockContainer.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, {passive: true});
+    clockContainer.addEventListener('touchend', e => {
+      let touchEndX = e.changedTouches[0].screenX;
+      if (touchStartX - touchEndX > 50) setTheme(state.themeIndex + 1);
+      if (touchEndX - touchStartX > 50) setTheme(state.themeIndex - 1);
+    }, {passive: true});
+
+    // PANTALLA COMPLETA
+    document.getElementById('btn-fullscreen').onclick = () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    };
+
+    // DRAWER / AJUSTES
+    const btnSettings = document.getElementById('btn-settings');
+    const btnCloseDrawer = document.getElementById('btn-close-drawer');
+
+    function toggleDrawer(open) {
+      if (open) {
+        drawer.classList.remove('translate-x-full');
+        drawerBackdrop.classList.remove('opacity-0', 'pointer-events-none');
+      } else {
+        drawer.classList.add('translate-x-full');
+        drawerBackdrop.classList.add('opacity-0', 'pointer-events-none');
+      }
+    }
+
+    btnSettings.onclick = () => toggleDrawer(true);
+    btnCloseDrawer.onclick = () => toggleDrawer(false);
+    drawerBackdrop.onclick = () => toggleDrawer(false);
+
+    // CONTROLES DE AJUSTES
+    const btnFmt12 = document.getElementById('btn-fmt-12');
+    const btnFmt24 = document.getElementById('btn-fmt-24');
+    const toggleSeconds = document.getElementById('toggle-seconds');
+    const sliderBrightness = document.getElementById('slider-brightness');
+    const labelBrightness = document.getElementById('label-brightness');
+    const pickerColor = document.getElementById('picker-color');
+    const labelColor = document.getElementById('label-color');
+    const selectFont = document.getElementById('select-font');
+
+    function syncSettingsUI() {
+      if (state.is24h) {
+        btnFmt24.className = 'py-2 rounded-lg font-bold bg-neutral-800 text-white shadow';
+        btnFmt12.className = 'py-2 rounded-lg font-medium text-neutral-400 hover:text-white';
+      } else {
+        btnFmt12.className = 'py-2 rounded-lg font-bold bg-neutral-800 text-white shadow';
+        btnFmt24.className = 'py-2 rounded-lg font-medium text-neutral-400 hover:text-white';
+      }
+      toggleSeconds.checked = state.showSeconds;
+      sliderBrightness.value = state.brightness;
+      labelBrightness.textContent = state.brightness + '%';
+      brightnessOverlay.style.opacity = (1 - state.brightness / 100);
+      pickerColor.value = state.accentColor;
+      labelColor.textContent = state.accentColor;
+      selectFont.value = state.fontFamily;
+    }
+
+    btnFmt12.onclick = () => { state.is24h = false; localStorage.setItem('is24h', 'false'); syncSettingsUI(); renderClock(); };
+    btnFmt24.onclick = () => { state.is24h = true; localStorage.setItem('is24h', 'true'); syncSettingsUI(); renderClock(); };
+    toggleSeconds.onchange = (e) => { state.showSeconds = e.target.checked; localStorage.setItem('showSeconds', state.showSeconds); renderClock(); };
+    sliderBrightness.oninput = (e) => {
+      state.brightness = parseInt(e.target.value);
+      localStorage.setItem('brightness', state.brightness);
+      labelBrightness.textContent = state.brightness + '%';
+      brightnessOverlay.style.opacity = (1 - state.brightness / 100);
+    };
+    pickerColor.oninput = (e) => {
+      state.accentColor = e.target.value;
+      labelColor.textContent = state.accentColor;
+      localStorage.setItem('accentColor', state.accentColor);
+      renderClock();
+    };
+    selectFont.onchange = (e) => {
+      state.fontFamily = e.target.value;
+      localStorage.setItem('fontFamily', state.fontFamily);
+      renderClock();
+    };
+
+    document.getElementById('btn-reset').onclick = () => {
+      localStorage.clear();
+      state = { themeIndex: 0, is24h: false, showSeconds: true, brightness: 100, accentColor: '#10b981', fontFamily: 'JetBrains Mono' };
+      syncSettingsUI();
+      renderIndicators();
+      renderClock();
+    };
+
+    // AUTO-OCULTAR BARRAS POR INACTIVIDAD (MODO INMERSIVO)
+    let hideTimer;
+    function resetHideTimer() {
+      topBar.classList.remove('opacity-0');
+      bottomBar.classList.remove('opacity-0');
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => {
+        topBar.classList.add('opacity-0');
+        bottomBar.classList.add('opacity-0');
+      }, 5000);
+    }
+    window.addEventListener('mousemove', resetHideTimer);
+    window.addEventListener('touchstart', resetHideTimer);
+
+    // REGISTRAR SERVICE WORKER SI EXISTE
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+
+    // INICIALIZACIÓN
+    syncSettingsUI();
+    renderIndicators();
+    updateDateBadge();
+    renderClock();
+    setInterval(renderClock, 1000);
+    setInterval(updateDateBadge, 60000);
+    resetHideTimer();
+  </script>
+</body>
+</html>
