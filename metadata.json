@@ -1,0 +1,7 @@
+{
+  "name": "Studio Clock",
+  "description": "Reloj de mesa y estudio de diseño inmersivo con 10 estilos visuales personalizables, persistencia de configuración y control de pantalla.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
